@@ -244,8 +244,8 @@
   if (tweetBtn) {
     tweetBtn.addEventListener('click', () => {
       // テキストとハッシュタグを設定
-      const text = '新バスシステムシミュレータ';
-      const hashtags = '新バスシステム,バス,金沢';
+      const text = '#新バスシステムシミュレータ 広坂１で遊んでいます！';
+      const hashtags = 'ありがとう新バスシステム';
       
       // シェアURL生成（現在の編集状態を含む）
       const shareUrl = generateShareUrl(displayData);
