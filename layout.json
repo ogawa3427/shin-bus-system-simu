@@ -4,22 +4,30 @@
     "height": 1600,
     "backgroundColor": "#2c2c2c"
   },
+  "mainArea": {
+    "border": {
+      "width": 30,
+      "color": "#38260d"
+    },
+    "gap": 7,
+    "gapColor": "#030303"
+  },
   "header": {
-    "height": 260,
+    "height": 320,
     "backgroundColor": null,
     "label": {
       "text": "新バスシステム",
       "backgroundColor": "#2c2c2c",
       "textColor": "#e6c200",
       "borderColor": "#e6c200",
-      "paddingX": 20,
+      "paddingX": 10,
       "paddingY": 10,
-      "fontSize": 46
+      "fontSize": 60
     },
     "description": {
       "fontSize": 20,
       "color": "#cfcfcf",
-      "marginTop": 48,
+      "marginTop": 80,
       "squareOnColor": "#4d984d",
       "squareOnEdgeColor": "#FFFFFF",
       "squareOnIconColor": "#FFFFFF"
@@ -28,19 +36,19 @@
       "fontSize": 25,
       "smallFontSize": 14,
       "color": "#cfcfcf",
-      "marginTop": 60,
+      "marginTop": 72,
       "labels": ["系統", "行先", "発車"],
       "topLine": {
-        "y": 200,
+        "y": 260,
         "width": 1082,
         "color": "#f1f1f1",
-        "lineWidth": 6
+        "lineWidth": 3
       }
     }
   },
   "row": {
     "height": 100,
-    "gap":20,
+    "gap":15,
     "horizontalGap": 0,
     "backgroundColor": "#2c2c2c",
     "gapBackgroundColor": "#030303",
@@ -53,7 +61,7 @@
       "number": 100,
       "via": 240,
       "destination": 500,
-      "led": 50
+      "led": 75
     },
     "spacing": {
       "afterApproach": 6,
@@ -88,14 +96,14 @@
     "led": {
       "ellipseWidth": 48,
       "ellipseHeight": 90,
-      "paddingRight": 20,
+      "paddingRight": 40,
       "color": "#552222",
       "borderColor": "#333333"
     }
   },
   "sidePanel": {
     "width": 700,
-    "backgroundColor": "#0f0f0f",
+    "backgroundColor": "#3D290F",
     "padding": 50,
     "stopNameFontSize": 24,
     "stopNumberFontSize": 18,
@@ -125,7 +133,7 @@
         "heightRatio": 0.8
       },
       "stopInfo": {
-        "marginTop": 400,
+        "bottomOffset": 100,
         "nameFontSize": 90,
         "nameLineGap": 4,
         "numberFontSize": 120,

@@ -45,7 +45,7 @@
   });
   
   const renderer = new Renderer(canvas, layoutData);
-  renderer.init();
+  renderer.init(displayData.routes.length);
   renderer.updateScale();
   
   window.addEventListener('resize', () => {

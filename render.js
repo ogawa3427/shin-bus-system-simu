@@ -37,15 +37,37 @@ class Renderer {
     });
   }
 
-  init() {
-    const cfg = this.layout.canvas;
+  init(routesCount = 10) {
     const positions = this.getColumnPositions();
-    // 全体の横幅 = 列の合計幅 + サイドパネルの幅
-    const calculatedWidth = positions.totalWidth + this.layout.sidePanel.width;
+    const ledCfg = this.layout.columns.led;
+    const rowCfg = this.layout.row;
+    const headerHeight = this.layout.header.height;
+    const horizontalGap = rowCfg.horizontalGap || 0;
+    const borderWidth = this.layout.mainArea?.border?.width || 0;
+    const areaGap = this.layout.mainArea?.gap || 0;
+    
+    // 左側の塊：コンテンツ幅（短冊の幅）
+    const contentWidth = positions.totalWidth - ledCfg.paddingRight + horizontalGap * 2;
+    // 左側のコンテンツ高さ（ヘッダー + gap + 短冊エリア）
+    const routesAreaHeight = routesCount * rowCfg.height + (routesCount > 0 ? (routesCount - 1) * rowCfg.gap : 0);
+    const contentHeight = headerHeight + rowCfg.gap + routesAreaHeight;
+    
+    // 左側のフレーム幅（コンテンツ + 枠線 * 2）
+    const leftFrameWidth = contentWidth + borderWidth * 2;
+    // 左側のフレーム高さ（コンテンツ + 枠線 * 2）
+    const leftFrameHeight = contentHeight + borderWidth * 2;
+    // 右側のフレーム幅（サイドパネル + 枠線 * 2）
+    const rightFrameWidth = this.layout.sidePanel.width + borderWidth * 2;
+    
+    // 全体の横幅 = 左フレーム幅 + gap + 右フレーム幅
+    const calculatedWidth = leftFrameWidth + areaGap + rightFrameWidth;
+    // 全体の縦幅 = 左フレーム高さ（右側は左に合わせる）
+    const calculatedHeight = leftFrameHeight;
+    
     this.baseWidth = calculatedWidth;
-    this.baseHeight = cfg.height;
+    this.baseHeight = calculatedHeight;
     this.canvas.width = calculatedWidth;
-    this.canvas.height = cfg.height;
+    this.canvas.height = calculatedHeight;
     this.clear();
   }
 
@@ -99,7 +121,17 @@ class Renderer {
   drawHeader(headerData, approachFarBlinkEnabled = false) {
     const ctx = this.ctx;
     const cfg = this.layout.header;
-    const y = 0;
+    // メインエリアの枠線の幅を取得
+    const borderWidth = this.layout.mainArea?.border?.width || 0;
+    const offsetX = borderWidth;
+    const offsetY = borderWidth;
+    
+    // コンテンツ幅を計算（短冊と同じロジック）
+    const positions = this.getColumnPositions();
+    const ledCfg = this.layout.columns.led;
+    const rowCfg = this.layout.row;
+    const horizontalGap = rowCfg.horizontalGap || 0;
+    const contentWidth = positions.totalWidth - ledCfg.paddingRight + horizontalGap * 2;
 
     ctx.save();
 
@@ -108,10 +140,10 @@ class Renderer {
       ? cfg.backgroundColor 
       : this.layout.canvas.backgroundColor;
     ctx.fillStyle = headerBgColor;
-    ctx.fillRect(0, 0, this.canvas.width - this.layout.sidePanel.width, cfg.height);
+    ctx.fillRect(offsetX, offsetY, contentWidth, cfg.height);
 
-    const labelX = 20;
-    const labelY = 20;
+    const labelX = offsetX + 20;
+    const labelY = offsetY + 20;
 
     ctx.font = `900 ${cfg.label.fontSize}px 'Noto Sans JP', sans-serif`;
     const labelWidth = ctx.measureText(headerData.label).width;
@@ -151,7 +183,7 @@ class Renderer {
     ctx.font = `${cfg.description.fontSize * 1.5}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.textBaseline = 'top';
     const descriptionY = labelY + cfg.label.fontSize + cfg.label.paddingY * 2 + cfg.description.marginTop + 14;
-    const descriptionX = 200; // 説明文の開始位置
+    const descriptionX = offsetX + 200; // 説明文の開始位置
     
     // 説明文の左に接近表示と同じ角丸四角形を配置
     const squareWidth = this.layout.row.height; // 既存の四角と同じサイズ
@@ -233,17 +265,8 @@ class Renderer {
     ctx.fillStyle = cfg.columnHeaders.color;
     ctx.textBaseline = 'middle';
     
-    const positions = this.getColumnPositions();
-    const rowCfg = this.layout.row;
-    const horizontalGap = rowCfg.horizontalGap || 0;
-    const ledCfg = this.layout.columns.led;
-    // 短冊と同じロジックで中央揃え位置を計算
-    const contentWidth = positions.totalWidth - ledCfg.paddingRight;
-    const stripWidth = contentWidth + horizontalGap * 2;
-    const rowAreaWidth = this.canvas.width - this.layout.sidePanel.width;
-    const stripX = (rowAreaWidth - stripWidth) / 2;
-    // 短冊内のコンテンツは stripX + horizontalGap から始まる
-    const contentStartX = stripX + horizontalGap;
+    // 短冊は枠線の内側に配置。短冊内のコンテンツはoffsetX + horizontalGapから始まる
+    const contentStartX = offsetX + horizontalGap;
     
     // 接近の見出しの上に横線を引く（短冊の幅全体に合わせて自動計算）
     if (cfg.columnHeaders.topLine) {
@@ -251,8 +274,8 @@ class Renderer {
       ctx.strokeStyle = topLine.color;
       ctx.lineWidth = topLine.lineWidth;
       ctx.beginPath();
-      ctx.moveTo(stripX, topLine.y);
-      ctx.lineTo(stripX + stripWidth, topLine.y);
+      ctx.moveTo(offsetX, offsetY + topLine.y);
+      ctx.lineTo(offsetX + contentWidth, offsetY + topLine.y);
       ctx.stroke();
     }
 
@@ -288,8 +311,12 @@ class Renderer {
     const rowCfg = this.layout.row;
     const headerHeight = this.layout.header.height;
     const horizontalGap = rowCfg.horizontalGap || 0;
-    // gapは行間のみに影響。行の位置はヘッダーの下 + gap + 前の行の下端 + gap
-    const y = headerHeight + rowCfg.gap + index * rowCfg.height + (index > 0 ? index * rowCfg.gap : 0);
+    // メインエリアの枠線の幅を取得
+    const borderWidth = this.layout.mainArea?.border?.width || 0;
+    const offsetX = borderWidth;
+    const offsetY = borderWidth;
+    // gapは行間のみに影響。行の位置はヘッダーの下 + gap + 前の行の下端 + gap（枠線の幅を考慮）
+    const y = offsetY + headerHeight + rowCfg.gap + index * rowCfg.height + (index > 0 ? index * rowCfg.gap : 0);
 
     // 短冊の中身の幅を取得
     const positions = this.getColumnPositions();
@@ -298,9 +325,8 @@ class Renderer {
     const contentWidth = positions.totalWidth - ledCfg.paddingRight;
     // 短冊の幅 = 中身の幅 + 左右のgap
     const stripWidth = contentWidth + horizontalGap * 2;
-    const rowAreaWidth = this.canvas.width - this.layout.sidePanel.width;
-    // 短冊を中央揃えで配置
-    const stripX = (rowAreaWidth - stripWidth) / 2;
+    // 短冊は枠線の内側に配置
+    const stripX = offsetX;
 
     ctx.save();
 
@@ -801,26 +827,53 @@ class Renderer {
     ctx.restore();
   }
 
-  drawSidePanel(stopInfo) {
+  drawSidePanel(stopInfo, leftFrameHeight) {
     const ctx = this.ctx;
     const cfg = this.layout.sidePanel;
-    const panelX = this.canvas.width - cfg.width;
-
+    const borderWidth = this.layout.mainArea?.border?.width || 0;
+    const borderColor = this.layout.mainArea?.border?.color || '#6b4423';
+    const areaGap = this.layout.mainArea?.gap || 0;
+    
+    // サイドパネルのフレーム開始位置（左側のフレームの右端 + gap）
+    const positions = this.getColumnPositions();
+    const ledCfg = this.layout.columns.led;
+    const rowCfg = this.layout.row;
+    const horizontalGap = rowCfg.horizontalGap || 0;
+    const contentWidth = positions.totalWidth - ledCfg.paddingRight + horizontalGap * 2;
+    const leftFrameWidth = contentWidth + borderWidth * 2;
+    
+    const frameX = leftFrameWidth + areaGap;
+    const frameWidth = cfg.width + borderWidth * 2;
+    // 右側の高さは左側の高さに合わせる
+    const frameHeight = leftFrameHeight;
+    
     ctx.save();
-
+    
+    // 1. 焦茶の枠を描画
+    if (borderWidth > 0) {
+      ctx.fillStyle = borderColor;
+      ctx.fillRect(frameX, 0, frameWidth, frameHeight);
+    }
+    
+    // 2. サイドパネルのコンテンツを描画（枠線の内側）
+    const panelX = frameX + borderWidth;
+    const panelY = borderWidth;
+    const panelWidth = cfg.width;
+    const panelHeight = frameHeight - borderWidth * 2;
+    
     ctx.fillStyle = cfg.backgroundColor;
-    ctx.fillRect(panelX, 0, cfg.width, this.canvas.height);
+    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
 
-    // 凡例を描画
-    this.drawSidePanelLegend(panelX, cfg);
+    // 凡例を描画（Y座標のオフセットとパネル高さも渡す）
+    this.drawSidePanelLegend(panelX, panelY, panelHeight, cfg);
 
     ctx.restore();
   }
 
-  drawSidePanelLegend(panelX, cfg) {
+  drawSidePanelLegend(panelX, panelY, panelHeight, cfg) {
     const ctx = this.ctx;
     const legendCfg = cfg.legend;
-    let currentY = cfg.padding + legendCfg.marginTop;
+    let currentY = panelY + cfg.padding + legendCfg.marginTop;
 
     const squareSize = legendCfg.squareSize;
     const padding = squareSize * 0.1;
@@ -913,8 +966,8 @@ class Renderer {
       }
     }
 
-    // 停留所情報を描画
-    this.drawSidePanelStopInfo(panelX, cfg, lastItemY);
+    // 停留所情報を描画（パネルの下端からのオフセットで配置）
+    this.drawSidePanelStopInfo(panelX, panelY, panelHeight, cfg, lastItemY);
   }
 
   drawTextWithKerning(ctx, text, x, y, fontSize, kerningRatio) {
@@ -944,10 +997,24 @@ class Renderer {
     });
   }
 
-  drawSidePanelStopInfo(panelX, cfg, startY) {
+  drawSidePanelStopInfo(panelX, panelY, panelHeight, cfg, startY) {
     const ctx = this.ctx;
     const stopInfoCfg = cfg.legend.stopInfo;
-    let currentY = startY + stopInfoCfg.marginTop;
+    const legendCfg = cfg.legend;
+    
+    // 停留所情報の全体の高さを計算
+    const lineFontSize = stopInfoCfg.nameFontSize;
+    const gap = stopInfoCfg.nameLineGap;
+    const totalNameHeight = lineFontSize * 2 + gap;
+    const platformHeight = stopInfoCfg.platformFontSize;
+    const englishHeight = stopInfoCfg.englishFontSize;
+    const totalStopInfoHeight = totalNameHeight + stopInfoCfg.platformMarginTop + platformHeight + stopInfoCfg.englishMarginTop + englishHeight;
+    
+    // bottomOffsetを使って下端からの位置を計算
+    const bottomOffset = stopInfoCfg.bottomOffset || 50;
+    const panelBottom = panelY + panelHeight;
+    // 停留所情報の開始Y位置（英語表記の下端がpanelBottom - bottomOffsetになるように）
+    let currentY = panelBottom - bottomOffset - totalStopInfoHeight;
 
     ctx.save();
     ctx.fillStyle = stopInfoCfg.textColor;
@@ -964,10 +1031,7 @@ class Renderer {
     // 左側7割：停留所名を2段で表示（均等割つけ&圧縮）
     const line1Text = " 広 坂• ";
     const line2Text = "21世紀美術館";
-    const lineFontSize = stopInfoCfg.nameFontSize;
-    const gap = stopInfoCfg.nameLineGap;
-    const totalTextHeight = lineFontSize * 2 + gap;
-    const nameAreaCenterY = currentY + totalTextHeight / 2;
+    const nameAreaCenterY = currentY + totalNameHeight / 2;
     const topCenterY = nameAreaCenterY - lineFontSize / 2 - gap / 2;
     const bottomCenterY = nameAreaCenterY + lineFontSize / 2 + gap / 2;
 
@@ -991,7 +1055,7 @@ class Renderer {
     ctx.textBaseline = 'top';
 
     // 「(しいのき迎賓館前)」を描画（全幅で均等割つけ&圧縮）
-    currentY = currentY + totalTextHeight + stopInfoCfg.platformMarginTop;
+    currentY = currentY + totalNameHeight + stopInfoCfg.platformMarginTop;
     ctx.font = `bold ${stopInfoCfg.platformFontSize}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.textBaseline = 'middle';
     const platformCenterY = currentY + stopInfoCfg.platformFontSize / 2;
@@ -1004,9 +1068,8 @@ class Renderer {
     this.drawStopNameLineWithFont(ctx, "Hirosaka•21st Century Museum", x, x + availableWidth, availableWidth, x + availableWidth / 2, englishCenterY, stopInfoCfg.englishFontSize, `bold ${stopInfoCfg.englishFontSize}px 'M PLUS Rounded 1c', sans-serif`);
     ctx.textBaseline = 'top';
 
-    // 「左記以外の路線は表示してありません」を描画（「広坂・」の真上）
-    const legendCfg = cfg.legend;
-    const stopNameStartY = startY + stopInfoCfg.marginTop;
+    // 「左記以外の路線は表示してありません」を描画（停留所名の真上）
+    const stopNameStartY = panelBottom - bottomOffset - totalStopInfoHeight;
     const otherRoutesY = stopNameStartY - legendCfg.otherRoutesMessage.marginTop - legendCfg.otherRoutesMessage.fontSize;
     ctx.fillStyle = legendCfg.otherRoutesMessage.color;
     ctx.font = `${legendCfg.otherRoutesMessage.fontSize}px 'M PLUS Rounded 1c', sans-serif`;
@@ -1152,18 +1215,56 @@ class Renderer {
 
   render(displayData, ledStates, approachStates, obstacleStates, approachFarBlink) {
     this.clear();
-    // 最初のルートの接近(遠)の点滅設定をヘッダーに渡す（点滅させず、点灯状態だけ表示）
-    const headerApproachFarBlinkEnabled = approachFarBlink && approachFarBlink.length > 0 ? approachFarBlink[0] : false;
-    this.drawHeader(displayData.header, headerApproachFarBlinkEnabled);
-    this.drawSidePanel(displayData.stopInfo);
-
+    
     const rowCfg = this.layout.row;
     const headerHeight = this.layout.header.height;
     const horizontalGap = rowCfg.horizontalGap || 0;
-    const mainAreaWidth = this.canvas.width - this.layout.sidePanel.width;
-
-    // 短冊間の隙間の背景色を描画
+    // メインエリアの枠線の幅を取得
+    const borderWidth = this.layout.mainArea?.border?.width || 0;
+    const borderColor = this.layout.mainArea?.border?.color || '#6b4423';
+    
+    // まず塊（コンテンツ）の大きさを計算
+    const positions = this.getColumnPositions();
+    const ledCfg = this.layout.columns.led;
+    const contentWidth = positions.totalWidth - ledCfg.paddingRight + horizontalGap * 2;
+    const routesCount = displayData.routes.length;
+    const routesAreaHeight = routesCount * rowCfg.height + (routesCount > 0 ? (routesCount - 1) * rowCfg.gap : 0);
+    const contentHeight = headerHeight + rowCfg.gap + routesAreaHeight;
+    
+    // 枠線を含む全体の大きさ
+    const frameWidth = contentWidth + borderWidth * 2;
+    const frameHeight = contentHeight + borderWidth * 2;
+    
+    // オフセット（枠線の幅分）
+    const offsetX = borderWidth;
+    const offsetY = borderWidth;
+    
     const ctx = this.ctx;
+    
+    // 1. 焦茶の枠を描画（塊の大きさ + 縁の幅*2）
+    if (borderWidth > 0) {
+      ctx.save();
+      ctx.fillStyle = borderColor;
+      ctx.fillRect(0, 0, frameWidth, frameHeight);
+      ctx.restore();
+    }
+    
+    // 2. 左右の枠の間のgapを描画
+    const areaGap = this.layout.mainArea?.gap || 0;
+    const areaGapColor = this.layout.mainArea?.gapColor || '#000000';
+    if (areaGap > 0) {
+      ctx.save();
+      ctx.fillStyle = areaGapColor;
+      ctx.fillRect(frameWidth, 0, areaGap, frameHeight);
+      ctx.restore();
+    }
+    
+    // 3. ヘッダーとサイドパネルを描画（枠の上に）
+    const headerApproachFarBlinkEnabled = approachFarBlink && approachFarBlink.length > 0 ? approachFarBlink[0] : false;
+    this.drawHeader(displayData.header, headerApproachFarBlinkEnabled);
+    this.drawSidePanel(displayData.stopInfo, frameHeight);
+    
+    // 2. 短冊間の隙間の背景色を描画（オフセット付き）
     ctx.save();
     const gapBgColor = rowCfg.gapBackgroundColor !== null && rowCfg.gapBackgroundColor !== undefined
       ? rowCfg.gapBackgroundColor
@@ -1171,37 +1272,27 @@ class Renderer {
     ctx.fillStyle = gapBgColor;
     
     // ヘッダーと最初の短冊の間のgap
-    const firstGapY = headerHeight;
-    ctx.fillRect(0, firstGapY, mainAreaWidth, rowCfg.gap);
+    const firstGapY = offsetY + headerHeight;
+    ctx.fillRect(offsetX, firstGapY, contentWidth, rowCfg.gap);
     
     // 短冊間のgap
     displayData.routes.forEach((route, index) => {
       if (index > 0) {
-        // 前の行の下端から現在の行の上端までの隙間を描画
-        const gapY = headerHeight + rowCfg.gap + (index - 1) * rowCfg.height + (index - 1) * rowCfg.gap + rowCfg.height;
-        ctx.fillRect(0, gapY, mainAreaWidth, rowCfg.gap);
+        const gapY = offsetY + headerHeight + rowCfg.gap + (index - 1) * rowCfg.height + (index - 1) * rowCfg.gap + rowCfg.height;
+        ctx.fillRect(offsetX, gapY, contentWidth, rowCfg.gap);
       }
     });
     
-    // 最後の短冊の後のgapは描画しない（無地の短冊っぽい図形が表示されないように）
-    
     // 短冊エリアの左右のgap
-    const routesAreaStartY = headerHeight + rowCfg.gap;
-    const routesAreaHeight = displayData.routes.length * rowCfg.height + (displayData.routes.length > 0 ? (displayData.routes.length - 1) * rowCfg.gap : 0);
+    const routesAreaStartY = offsetY + headerHeight + rowCfg.gap;
     // 左側のgap
-    ctx.fillRect(0, routesAreaStartY, horizontalGap, routesAreaHeight);
+    ctx.fillRect(offsetX, routesAreaStartY, horizontalGap, routesAreaHeight);
     // 右側のgap
-    ctx.fillRect(mainAreaWidth - horizontalGap, routesAreaStartY, horizontalGap, routesAreaHeight);
-    
-    // 短冊エリアの下の余白をgapBackgroundColorで塗りつぶす
-    const routesAreaEndY = routesAreaStartY + routesAreaHeight;
-    const remainingHeight = this.canvas.height - routesAreaEndY;
-    if (remainingHeight > 0) {
-      ctx.fillRect(0, routesAreaEndY, mainAreaWidth, remainingHeight);
-    }
+    ctx.fillRect(offsetX + contentWidth - horizontalGap, routesAreaStartY, horizontalGap, routesAreaHeight);
     
     ctx.restore();
 
+    // 3. 短冊を描画（オフセット付き）
     displayData.routes.forEach((route, index) => {
       this.drawRow(route, index, ledStates[index], approachStates[index], obstacleStates[index], false);
     });
