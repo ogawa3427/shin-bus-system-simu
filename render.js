@@ -1129,13 +1129,7 @@ class Renderer {
 
     ctx.save();
 
-    // 角丸四角形を描画
-    if (state.fill) {
-      ctx.fillStyle = legendCfg.onFillColor || '#90ee90'; // 常時点灯の緑
-    } else {
-      ctx.fillStyle = '#0f0f0f'; // 背景色と同じ（エッジだけ）
-    }
-
+    // 角丸四角形のパスを作成
     ctx.beginPath();
     ctx.moveTo(innerX + cornerRadius, innerY);
     ctx.lineTo(innerX + innerSize - cornerRadius, innerY);
@@ -1147,18 +1141,25 @@ class Renderer {
     ctx.lineTo(innerX, innerY + cornerRadius);
     ctx.quadraticCurveTo(innerX, innerY, innerX + cornerRadius, innerY);
     ctx.closePath();
-    ctx.fill();
+
+    // 点灯時のみ塗りつぶし（消灯時は透明）
+    if (state.fill) {
+      ctx.fillStyle = legendCfg.onFillColor || '#90ee90';
+      ctx.fill();
+    }
 
     // エッジを描画
     if (state.edge) {
-      const iconColor = state.fill ? (legendCfg.onIconColor || '#888888') : '#ffffff';
       const edgeColor = state.fill ? (legendCfg.onEdgeColor || '#888888') : '#ffffff';
       ctx.strokeStyle = edgeColor;
       ctx.lineWidth = 3;
       ctx.stroke();
+    }
 
-      // バスアイコンを描画
-      const busIcon = state.fill ? this.busIconOn : this.busIconOff;
+    // バスアイコンを描画（点灯時のみ）
+    if (state.fill) {
+      const iconColor = legendCfg.onIconColor || '#888888';
+      const busIcon = this.busIconOn;
       if (busIcon) {
         const iconSize = innerSize * 0.85;
         const iconX = innerX + (innerSize - iconSize) / 2;

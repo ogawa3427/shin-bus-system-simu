@@ -110,7 +110,7 @@
     "englishFontSize": 14,
     "textColor": "#f1f1f1",
     "legend": {
-      "marginTop": 205,
+      "marginTop": 250,
       "itemHeight": 60,
       "itemGap": 15,
       "gapBeforeObstacle": 80,
