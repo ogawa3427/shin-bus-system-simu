@@ -1,0 +1,115 @@
+{
+  "header": {
+    "label": "新バスシステム",
+    "description": "このマークが出ますとまもなくバスがきます。",
+    "columnHeaders": ["接近", "路線番号", "(経由)", "行先", "障害"]
+  },
+  "routes": [
+    {
+      "numberUpper": "94",
+      "numberLower": "96",
+      "destinationUpper": "若松",
+      "destinationLower": "",
+      "subDestination": "旭町",
+      "approachFarBlink": true,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "13",
+      "numberLower": "14",
+      "destinationUpper": "金商高校",
+      "destinationLower": "太陽が丘・医王山",
+      "subDestination": "小立野",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "15",
+      "numberLower": "43",
+      "destinationUpper": "金沢大学附属病院",
+      "destinationLower": "北陸大学・辰巳丘高校",
+      "subDestination": "小立野",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "10",
+      "numberLower": "",
+      "destinationUpper": "東部車庫･金沢学院大学",
+      "destinationLower": "",
+      "subDestination": "小立野",
+      "approachFarBlink": true,
+      "approachNearBlink": true,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "",
+      "numberLower": "",
+      "destinationUpper": "柳橋",
+      "destinationLower": "",
+      "subDestination": "",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "90",
+      "numberLower": "",
+      "destinationUpper": "千寿閣･卯辰山",
+      "destinationLower": "",
+      "subDestination": "兼六園下",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "92",
+      "numberLower": "",
+      "destinationUpper": "朝霧台",
+      "destinationLower": "",
+      "subDestination": "鈴見台",
+      "approachFarBlink": false,
+      "approachNearBlink": true,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "93",
+      "numberLower": "",
+      "destinationUpper": "金沢大学",
+      "destinationLower": "",
+      "subDestination": "鈴見",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "",
+      "numberLower": "",
+      "destinationUpper": "旭町･金沢大学",
+      "destinationLower": "",
+      "subDestination": "",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    },
+    {
+      "numberUpper": "95",
+      "numberLower": "",
+      "destinationUpper": "北陸大学",
+      "destinationLower": "",
+      "subDestination": "旭町",
+      "approachFarBlink": false,
+      "approachNearBlink": false,
+      "obstacle": false
+    }
+  ],
+  "stopInfo": {
+    "name": "広坂・21世紀美術館",
+    "number": "①",
+    "pratformname": "(しいのき迎賓館前)",
+    "english": "Hirokawa・21st Century Art Museum"
+  }
+}

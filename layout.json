@@ -1,0 +1,98 @@
+{
+  "canvas": {
+    "width": 841,
+    "height": 800,
+    "backgroundColor": "#0b0b0b"
+  },
+  "header": {
+    "height": 140,
+    "label": {
+      "text": "新バスシステム",
+      "backgroundColor": "#000000",
+      "textColor": "#e6c200",
+      "borderColor": "#e6c200",
+      "paddingX": 12,
+      "paddingY": 6,
+      "fontSize": 24
+    },
+    "description": {
+      "fontSize": 12,
+      "color": "#cfcfcf",
+      "marginTop": 20
+    },
+    "columnHeaders": {
+      "fontSize": 14,
+      "smallFontSize": 7,
+      "color": "#cfcfcf",
+      "marginTop": 25,
+      "labels": ["系統", "行先", "発車"],
+      "topLine": {
+        "y": 112.5,
+        "width": 541,
+        "color": "#ffffff",
+        "lineWidth": 3
+      }
+    }
+  },
+  "row": {
+    "height": 50,
+    "gap": 0,
+    "backgroundColor": "#111111",
+    "activeBackgroundColor": "#2a2a2a",
+    "borderColor": "#333333",
+    "borderWidth": 1
+  },
+  "columns": {
+    "widths": {
+      "approach": 100,
+      "number": 50,
+      "via": 120,
+      "destination": 250,
+      "led": 25
+    },
+    "spacing": {
+      "afterApproach": 10.4,
+      "afterNumber": 0,
+      "afterVia": 0,
+      "afterDestination": 0
+    },
+    "greenSquares": {
+      "paddingLeft": 16,
+      "squareSize": 20,
+      "squareGap": 8,
+      "color": "#90ee90"
+    },
+    "number": {
+      "paddingLeft": 8,
+      "fontSize": 20,
+      "color": "#ffffff"
+    },
+    "via": {
+      "paddingLeft": 16,
+      "fontSize": 14,
+      "color": "#ffffff"
+    },
+    "destination": {
+      "paddingLeft": 16,
+      "fontSize": 20,
+      "color": "#ffffff"
+    },
+    "led": {
+      "ellipseWidth": 24,
+      "ellipseHeight": 50,
+      "paddingRight": 16,
+      "color": "#552222",
+      "borderColor": "#333333"
+    }
+  },
+  "sidePanel": {
+    "width": 300,
+    "backgroundColor": "#0f0f0f",
+    "padding": 20,
+    "stopNameFontSize": 24,
+    "stopNumberFontSize": 18,
+    "englishFontSize": 14,
+    "textColor": "#ffffff"
+  }
+}
+
