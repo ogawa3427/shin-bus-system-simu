@@ -143,14 +143,14 @@ class Renderer {
     ctx.fillStyle = '#ffffff'; // 説明文の文字色を白に
     ctx.font = `${cfg.description.fontSize * 1.5}px 'M PLUS Rounded 1c', sans-serif`;
     ctx.textBaseline = 'top';
-    const descriptionY = labelY + cfg.label.fontSize + cfg.label.paddingY * 2 + cfg.description.marginTop + 12;
-    const descriptionX = 120; // 説明文の開始位置
+    const descriptionY = labelY + cfg.label.fontSize + cfg.label.paddingY * 2 + cfg.description.marginTop + 14;
+    const descriptionX = 200; // 説明文の開始位置
     
     // 説明文の左に接近表示と同じ角丸四角形を配置
     const squareWidth = this.layout.row.height; // 既存の四角と同じサイズ
     const descriptionFontSize = cfg.description.fontSize * 1.4;
     // 角丸の最下部に説明文の最下部を合わせる
-    const descriptionBottom = descriptionY + descriptionFontSize + 5;
+    const descriptionBottom = descriptionY + descriptionFontSize + 15;
     const squareY = descriptionBottom - squareWidth;
     const padding = squareWidth * 0.1;
     const innerSize = squareWidth - padding * 2;

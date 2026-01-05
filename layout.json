@@ -1,41 +1,41 @@
 {
   "canvas": {
     "width": 841,
-    "height": 800,
+    "height": 1600,
     "backgroundColor": "#0b0b0b"
   },
   "header": {
-    "height": 140,
+    "height": 260,
     "label": {
       "text": "新バスシステム",
       "backgroundColor": "#000000",
       "textColor": "#e6c200",
       "borderColor": "#e6c200",
-      "paddingX": 12,
-      "paddingY": 6,
-      "fontSize": 24
+      "paddingX": 20,
+      "paddingY": 10,
+      "fontSize": 46
     },
     "description": {
-      "fontSize": 12,
+      "fontSize": 20,
       "color": "#cfcfcf",
-      "marginTop": 20
+      "marginTop": 48
     },
     "columnHeaders": {
-      "fontSize": 14,
-      "smallFontSize": 7,
+      "fontSize": 28,
+      "smallFontSize": 14,
       "color": "#cfcfcf",
-      "marginTop": 25,
+      "marginTop": 60,
       "labels": ["系統", "行先", "発車"],
       "topLine": {
-        "y": 112.5,
-        "width": 541,
+        "y": 200,
+        "width": 1082,
         "color": "#ffffff",
-        "lineWidth": 3
+        "lineWidth": 6
       }
     }
   },
   "row": {
-    "height": 50,
+    "height": 100,
     "gap": 0,
     "backgroundColor": "#111111",
     "activeBackgroundColor": "#2a2a2a",
@@ -44,14 +44,14 @@
   },
   "columns": {
     "widths": {
-      "approach": 100,
-      "number": 50,
-      "via": 120,
-      "destination": 250,
-      "led": 25
+      "approach": 200,
+      "number": 100,
+      "via": 240,
+      "destination": 500,
+      "led": 50
     },
     "spacing": {
-      "afterApproach": 10.4,
+      "afterApproach": 6,
       "afterNumber": 0,
       "afterVia": 0,
       "afterDestination": 0
@@ -78,9 +78,9 @@
       "color": "#ffffff"
     },
     "led": {
-      "ellipseWidth": 24,
-      "ellipseHeight": 50,
-      "paddingRight": 16,
+      "ellipseWidth": 48,
+      "ellipseHeight": 90,
+      "paddingRight": 0,
       "color": "#552222",
       "borderColor": "#333333"
     }
