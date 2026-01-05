@@ -88,6 +88,36 @@ class HotReloadServer:
             self.ws_server.close()
 
 class HTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    project_root = None
+
+    def translate_path(self, path):
+        if self.project_root is None:
+            return super().translate_path(path)
+        
+        # クエリパラメータを除去
+        path = path.split('?')[0]
+        
+        # パスを解析
+        path_parts = [p for p in path.strip('/').split('/') if p]
+        
+        # ルートのindex.htmlへのアクセス
+        if not path_parts:
+            return str(self.project_root / 'index.html')
+        
+        # hirosaka1/ へのアクセス
+        if path_parts[0] == 'hirosaka1':
+            if len(path_parts) == 1:
+                # hirosaka1/ へのアクセスは index.html を返す
+                return str(self.project_root / 'hirosaka1' / 'index.html')
+            else:
+                # hirosaka1/xxx へのアクセス
+                file_path = self.project_root / 'hirosaka1' / '/'.join(path_parts[1:])
+                return str(file_path)
+        
+        # ルートのファイルへのアクセス
+        file_path = self.project_root / '/'.join(path_parts)
+        return str(file_path)
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
         self.send_header('Pragma', 'no-cache')
@@ -104,8 +134,9 @@ def run_websocket_server(hot_reload):
     hot_reload.loop.run_forever()
 
 def main():
-    os.chdir(Path(__file__).parent)
-
+    # プロジェクトルートを取得（移動しない）
+    project_root = Path(__file__).parent
+    
     hot_reload = HotReloadServer()
 
     ws_thread = threading.Thread(
@@ -119,10 +150,15 @@ def main():
 
     hot_reload.start_file_watcher()
 
+    # プロジェクトルートをクラス変数に設定
+    HTTPRequestHandler.project_root = project_root
+    
     with socketserver.TCPServer(("", PORT), HTTPRequestHandler) as httpd:
         print(f"Development server started: http://localhost:{PORT}")
         print(f"WebSocket server: ws://localhost:{WS_PORT}")
         print("Watching for file changes... (Ctrl+C to stop)")
+        print(f"  - Root: http://localhost:{PORT}/")
+        print(f"  - Hirosaka1: http://localhost:{PORT}/hirosaka1/")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

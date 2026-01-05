@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新バスシステムシミュレータ</title>
+    <!-- OGP (Open Graph Protocol) メタタグ -->
+    <meta property="og:url" content="https://ogawa3427.github.io/shin-bus-system-simu/hirosaka1">
+    <meta property="og:title" content="金沢 新バスシステムシミュレータ (広坂①タイプ)">
+    <meta property="og:description" content="金沢近郊での新バスシステム表示装置のシミュレーターです。停留所情報や路線情報を編集できます。">
+    <meta property="og:image" content="https://ogawa3427.github.io/shin-bus-system-simu/hirosaka1/hirosaka1_samune.jpg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@ogawa3427">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <!-- https://icooon-mono.com/11936-%E3%83%90%E3%82%B9%E3%81%AE%E3%82%A2%E3%82%A4%E3%82%B3%E3%83%B3/ -->
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: #f5f5f5;
+            font-family: 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #ccc;
+        }
+        h1 {
+            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        canvas {
+            display: block;
+        }
+        .zoom-controls {
+            display: flex;
+            gap: 4px;
+        }
+        .zoom-btn {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            background: #fff;
+            color: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            user-select: none;
+        }
+        .zoom-btn:hover {
+            background: #f0f0f0;
+        }
+        .zoom-btn:active {
+            background: #e0e0e0;
+        }
+        #save-canvas {
+            background: #007bff;
+            color: #fff;
+            border-color: #0056b3;
+        }
+        #save-canvas:hover {
+            background: #0056b3;
+        }
+        #save-canvas:active {
+            background: #004085;
+        }
+        #tweet-btn {
+            background: #1da1f2;
+            color: #fff;
+            border-color: #0d8bd9;
+        }
+        #tweet-btn:hover {
+            background: #0d8bd9;
+        }
+        #tweet-btn:active {
+            background: #0a6fa8;
+        }
+        #copy-url-btn {
+            background: #28a745;
+            color: #fff;
+            border-color: #1e7e34;
+        }
+        #copy-url-btn:hover {
+            background: #1e7e34;
+        }
+        #copy-url-btn:active {
+            background: #19692c;
+        }
+        .editor-container {
+        }
+        #editor {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px 6px 0 0;
+            padding: 8px;
+            height: 400px;
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+        .resize-handle {
+            height: 16px;
+            background: #ddd;
+            border: 1px solid #ccc;
+            border-top: none;
+            cursor: ns-resize;
+            border-radius: 0 0 6px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .resize-handle::after {
+            content: '';
+            width: 40px;
+            height: 4px;
+            background: #999;
+            border-radius: 2px;
+        }
+        .resize-handle:hover {
+            background: #bbb;
+        }
+        /* スクロールバーを常に表示（WebKit系） */
+        #editor::-webkit-scrollbar {
+            width: 12px;
+        }
+        #editor::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+        #editor::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 6px;
+        }
+        #editor::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .stop-info-editor {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+        .stop-info-editor h3 {
+            color: #333;
+            margin: 0 0 4px 0;
+            font-size: 16px;
+        }
+        .stop-info-editor label {
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 4px;
+            color: #555;
+            font-size: 14px;
+        }
+        .stop-info-editor input[type="text"] {
+            color: #333;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px 8px;
+            width: 200px;
+            margin-right: 4px;
+        }
+        .stop-info-editor input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .route-editor {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+        .route-editor h3 {
+            color: #333;
+            margin: 0 0 4px 0;
+            font-size: 16px;
+        }
+        .route-editor label {
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 4px;
+            color: #555;
+            font-size: 14px;
+        }
+        .route-editor input[type="text"] {
+            color: #333;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 4px 8px;
+            width: 180px;
+            margin-right: 4px;
+        }
+        .route-editor input[type="text"]:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .route-editor input[type="checkbox"] {
+            margin-right: 4px;
+        }
+        .route-editor > div {
+            margin-bottom: 4px;
+        }
+        .route-editor > div:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>新バスシステムシミュレータ (広坂①タイプ)</h1>
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-out">− 縮小</button>
+                <button class="zoom-btn" id="zoom-in">＋ 拡大</button>
+                <button class="zoom-btn" id="save-canvas">💾 保存</button>
+                <button class="zoom-btn" id="copy-url-btn">🔗 URLをコピー</button>
+                <button class="zoom-btn" id="tweet-btn">🐦 ツイート</button>
+            </div>
+        </div>
+        <div class="canvas-wrapper">
+            <canvas id="display"></canvas>
+        </div>
+        <div class="editor-container">
+            <div id="editor"></div>
+            <div class="resize-handle" id="resize-handle"></div>
+        </div>
+    </div>
+    <script src="render.js"></script>
+    <script src="main.js"></script>
+    <script>
+        (function() {
+            // OGPメタタグのURLを動的に設定
+            const currentUrl = window.location.href.split('?')[0].split('#')[0]; // クエリとハッシュを除去
+            const ogUrlMeta = document.querySelector('meta[property="og:url"]');
+            if (ogUrlMeta && !ogUrlMeta.content) {
+                ogUrlMeta.content = currentUrl;
+            }
+            
+            // OGP画像URLが未設定の場合、デフォルト画像を設定（実際のデプロイ先に合わせて変更が必要）
+            const ogImageMeta = document.querySelector('meta[property="og:image"]');
+            if (ogImageMeta && !ogImageMeta.content) {
+                // デフォルトでは現在のページのURLベースで画像を探す
+                // 実際のデプロイ時は、1200x630のOGP画像を用意して絶対パスで指定すること
+                const imageUrl = new URL('og-image.jpg', currentUrl).href;
+                ogImageMeta.content = imageUrl;
+            }
+            
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                const ws = new WebSocket('ws://localhost:8001');
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'reload') {
+                        location.reload();
+                    }
+                };
+                ws.onerror = function() {
+                    console.log('開発サーバーに接続できません（通常の動作には影響ありません）');
+                };
+            }
+        })();
+    </script>
+</body>
+</html>
+

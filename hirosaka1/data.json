@@ -107,9 +107,10 @@
     }
   ],
   "stopInfo": {
-    "name": "広坂・21世紀美術館",
+    "nameUpper": " 広坂・",
+    "nameLower": "21世紀美術館",
     "number": "①",
-    "pratformname": "(しいのき迎賓館前)",
-    "english": "Hirokawa・21st Century Art Museum"
+    "platformName": "(しいのき迎賓館前)",
+    "english": "Hirosaka・21st Century Museum"
   }
 }

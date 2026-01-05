@@ -6,6 +6,9 @@ class Renderer {
     this.layout = layout;
     this.busIconOn = null;
     this.busIconOff = null;
+    // localStorageから手動スケール率を読み込む
+    const savedScale = localStorage.getItem('busSystemManualScaleRatio');
+    this.manualScaleRatio = savedScale !== null ? parseFloat(savedScale) : null;
     this.loadBusIcons();
   }
 
@@ -72,15 +75,49 @@ class Renderer {
   }
 
   updateScale() {
-    const maxWidth = window.innerWidth * 0.95;
-    const maxHeight = window.innerHeight * 0.95;
-    
-    const scaleX = maxWidth / this.baseWidth;
-    const scaleY = maxHeight / this.baseHeight;
-    const scale = Math.min(scaleX, scaleY, 1);
-    
-    this.canvas.style.width = `${this.baseWidth * scale}px`;
-    this.canvas.style.height = `${this.baseHeight * scale}px`;
+    if (this.manualScaleRatio !== null) {
+      // 手動スケール率が設定されている場合
+      const targetWidth = window.innerWidth * this.manualScaleRatio;
+      const scale = targetWidth / this.baseWidth;
+      this.canvas.style.width = `${this.baseWidth * scale}px`;
+      this.canvas.style.height = `${this.baseHeight * scale}px`;
+    } else {
+      // 自動スケール
+      const maxWidth = window.innerWidth * 0.95;
+      const maxHeight = window.innerHeight * 0.95;
+      
+      const scaleX = maxWidth / this.baseWidth;
+      const scaleY = maxHeight / this.baseHeight;
+      const scale = Math.min(scaleX, scaleY, 1);
+      
+      this.canvas.style.width = `${this.baseWidth * scale}px`;
+      this.canvas.style.height = `${this.baseHeight * scale}px`;
+    }
+  }
+
+  setManualScale(ratio) {
+    // ratio: 横幅に占める割合（0.1-1.0、10%刻み）
+    this.manualScaleRatio = Math.max(0.1, Math.min(1.0, ratio));
+    // localStorageに保存
+    localStorage.setItem('busSystemManualScaleRatio', this.manualScaleRatio.toString());
+    this.updateScale();
+  }
+
+  adjustScale(delta) {
+    // delta: 調整量（10%刻み、-0.1 or +0.1）
+    if (this.manualScaleRatio === null) {
+      // 現在の自動スケールから手動スケールに切り替え
+      // 現在のcanvasの実際の幅を取得
+      const currentCanvasWidth = this.canvas.offsetWidth || this.canvas.clientWidth;
+      // 横幅に占める割合を計算
+      const currentRatio = currentCanvasWidth / window.innerWidth;
+      // 10%刻みに丸める
+      this.manualScaleRatio = Math.round(currentRatio * 10) / 10;
+    }
+    this.manualScaleRatio = Math.max(0.1, Math.min(1.0, this.manualScaleRatio + delta));
+    // localStorageに保存
+    localStorage.setItem('busSystemManualScaleRatio', this.manualScaleRatio.toString());
+    this.updateScale();
   }
 
   clear() {
@@ -865,12 +902,12 @@ class Renderer {
     ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
 
     // 凡例を描画（Y座標のオフセットとパネル高さも渡す）
-    this.drawSidePanelLegend(panelX, panelY, panelHeight, cfg);
+    this.drawSidePanelLegend(panelX, panelY, panelHeight, cfg, stopInfo);
 
     ctx.restore();
   }
 
-  drawSidePanelLegend(panelX, panelY, panelHeight, cfg) {
+  drawSidePanelLegend(panelX, panelY, panelHeight, cfg, stopInfo) {
     const ctx = this.ctx;
     const legendCfg = cfg.legend;
     let currentY = panelY + cfg.padding + legendCfg.marginTop;
@@ -967,7 +1004,7 @@ class Renderer {
     }
 
     // 停留所情報を描画（パネルの下端からのオフセットで配置）
-    this.drawSidePanelStopInfo(panelX, panelY, panelHeight, cfg, lastItemY);
+    this.drawSidePanelStopInfo(panelX, panelY, panelHeight, cfg, lastItemY, stopInfo);
   }
 
   drawTextWithKerning(ctx, text, x, y, fontSize, kerningRatio) {
@@ -997,14 +1034,23 @@ class Renderer {
     });
   }
 
-  drawSidePanelStopInfo(panelX, panelY, panelHeight, cfg, startY) {
+  drawSidePanelStopInfo(panelX, panelY, panelHeight, cfg, startY, stopInfo) {
     const ctx = this.ctx;
     const stopInfoCfg = cfg.legend.stopInfo;
     const legendCfg = cfg.legend;
     
-    // 停留所情報の全体の高さを計算
+    // stopInfoから値を取得（デフォルト値も設定）
+    const nameUpper = stopInfo?.nameUpper || '';
+    const nameLower = stopInfo?.nameLower || '';
+    const number = stopInfo?.number || '';
+    const platformName = stopInfo?.platformName || '';
+    const english = stopInfo?.english || '';
+    
+    // 二段目がない場合は一段目を二段分専有
+    const hasTwoLines = nameLower && nameLower.trim() !== '';
     const lineFontSize = stopInfoCfg.nameFontSize;
     const gap = stopInfoCfg.nameLineGap;
+    // 常に二段分の高さを使用（二段目がない場合は一段目が中央に配置される）
     const totalNameHeight = lineFontSize * 2 + gap;
     const platformHeight = stopInfoCfg.platformFontSize;
     const englishHeight = stopInfoCfg.englishFontSize;
@@ -1023,49 +1069,68 @@ class Renderer {
 
     const x = panelX + cfg.padding;
     const availableWidth = cfg.width - cfg.padding * 2;
-    const leftWidth = availableWidth * 0.7;
-    const rightWidth = availableWidth * 0.3;
+    // 左側7割、右側3割の比率を維持しつつ、ギリギリまで近づけるため少し余裕を持たせる
+    const leftWidthRatio = 0.75; // 7割より少し広げる
+    const rightWidthRatio = 0.3; // 3割より少し狭める
+    const leftWidth = availableWidth * leftWidthRatio;
+    const rightWidth = availableWidth * rightWidthRatio;
     const leftX = x;
     const rightX = x + leftWidth;
+    // テキストの描画範囲を右側の数字の直前まで広げる（ギリギリまで近づける）
+    const textAreaWidth = rightX - leftX; // 10pxの余裕を持たせる
 
-    // 左側7割：停留所名を2段で表示（均等割つけ&圧縮）
-    const line1Text = " 広 坂• ";
-    const line2Text = "21世紀美術館";
+    // 左側7割：停留所名を表示（均等割つけ&圧縮）
     const nameAreaCenterY = currentY + totalNameHeight / 2;
-    const topCenterY = nameAreaCenterY - lineFontSize / 2 - gap / 2;
-    const bottomCenterY = nameAreaCenterY + lineFontSize / 2 + gap / 2;
-
-    ctx.font = `bold ${lineFontSize}px 'Noto Sans JP', sans-serif`;
+    
     ctx.textBaseline = 'middle';
     
-    // 上段「広坂・」
-    this.drawStopNameLine(ctx, line1Text, leftX, leftX + leftWidth, leftWidth, leftX + leftWidth / 2, topCenterY, lineFontSize);
-    
-    // 下段「21世紀美術館」
-    this.drawStopNameLine(ctx, line2Text, leftX, leftX + leftWidth, leftWidth, leftX + leftWidth / 2, bottomCenterY, lineFontSize);
+    if (hasTwoLines) {
+      // 二段で表示
+      ctx.font = `bold ${lineFontSize}px 'Noto Sans JP', sans-serif`;
+      const topCenterY = nameAreaCenterY - lineFontSize / 2 - gap / 2;
+      const bottomCenterY = nameAreaCenterY + lineFontSize / 2 + gap / 2;
+      
+      // 上段（テキスト範囲を広げてギリギリまで近づける）
+      this.drawStopNameLine(ctx, nameUpper, leftX, leftX + textAreaWidth, textAreaWidth, leftX + textAreaWidth / 2, topCenterY, lineFontSize);
+      
+      // 下段
+      this.drawStopNameLine(ctx, nameLower, leftX, leftX + textAreaWidth, textAreaWidth, leftX + textAreaWidth / 2, bottomCenterY, lineFontSize);
+    } else {
+      // 一段目を二段分専有（フォントサイズを大きくして二段分の高さを使用）
+      // 二段分の高さに収まるようにフォントサイズを計算（gap分は余裕として考慮）
+      const singleLineFontSize = totalNameHeight * 0.9; // 二段分の高さの90%を使用
+      ctx.font = `bold ${singleLineFontSize}px 'Noto Sans JP', sans-serif`;
+      this.drawStopNameLine(ctx, nameUpper, leftX, leftX + textAreaWidth, textAreaWidth, leftX + textAreaWidth / 2, nameAreaCenterY, singleLineFontSize);
+    }
 
-    // 右側3割：①を中央揃え（上下左右）
+    // 右側3割：乗り場番号を中央揃え（上下左右）
     ctx.font = `bold ${stopInfoCfg.numberFontSize}px 'Noto Sans JP', sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const numberCenterX = rightX + rightWidth / 2;
-    ctx.fillText("①", numberCenterX, nameAreaCenterY);
+    ctx.fillText(number, numberCenterX, nameAreaCenterY);
     
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    // 「(しいのき迎賓館前)」を描画（全幅で均等割つけ&圧縮）
+    // 乗り場名を描画（全幅で均等割つけ&圧縮）
+    // 空文字列でも位置計算は行う（レイアウト維持のため）
     currentY = currentY + totalNameHeight + stopInfoCfg.platformMarginTop;
-    ctx.font = `bold ${stopInfoCfg.platformFontSize}px 'M PLUS Rounded 1c', sans-serif`;
-    ctx.textBaseline = 'middle';
-    const platformCenterY = currentY + stopInfoCfg.platformFontSize / 2;
-    this.drawStopNameLineWithFont(ctx, "(しいのき迎賓館前)", x, x + availableWidth, availableWidth, x + availableWidth / 2, platformCenterY, stopInfoCfg.platformFontSize, `bold ${stopInfoCfg.platformFontSize}px 'M PLUS Rounded 1c', sans-serif`);
+    if (platformName) {
+      ctx.font = `bold ${stopInfoCfg.platformFontSize}px 'M PLUS Rounded 1c', sans-serif`;
+      ctx.textBaseline = 'middle';
+      const platformCenterY = currentY + stopInfoCfg.platformFontSize / 2;
+      this.drawStopNameLineWithFont(ctx, platformName, x, x + availableWidth, availableWidth, x + availableWidth / 2, platformCenterY, stopInfoCfg.platformFontSize, `bold ${stopInfoCfg.platformFontSize}px 'M PLUS Rounded 1c', sans-serif`);
+    }
 
-    // 「Hirosaka•21 Century Museum」を描画（全幅で均等割つけ&圧縮）
+    // 英語表記を描画（全幅で均等割つけ&圧縮）
+    // 空文字列でも位置計算は行う（レイアウト維持のため）
     currentY += stopInfoCfg.platformFontSize + stopInfoCfg.englishMarginTop;
-    ctx.font = `bold ${stopInfoCfg.englishFontSize}px 'M PLUS Rounded 1c', sans-serif`;
-    const englishCenterY = currentY + stopInfoCfg.englishFontSize / 2;
-    this.drawStopNameLineWithFont(ctx, "Hirosaka•21st Century Museum", x, x + availableWidth, availableWidth, x + availableWidth / 2, englishCenterY, stopInfoCfg.englishFontSize, `bold ${stopInfoCfg.englishFontSize}px 'M PLUS Rounded 1c', sans-serif`);
+    if (english) {
+      ctx.font = `bold ${stopInfoCfg.englishFontSize}px 'M PLUS Rounded 1c', sans-serif`;
+      const englishCenterY = currentY + stopInfoCfg.englishFontSize / 2;
+      this.drawStopNameLineWithFont(ctx, english, x, x + availableWidth, availableWidth, x + availableWidth / 2, englishCenterY, stopInfoCfg.englishFontSize, `bold ${stopInfoCfg.englishFontSize}px 'M PLUS Rounded 1c', sans-serif`);
+    }
     ctx.textBaseline = 'top';
 
     // 「左記以外の路線は表示してありません」を描画（停留所名の真上）

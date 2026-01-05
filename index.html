@@ -3,83 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新バスシステムシミュ</title>
+    <title>新バスシステムシミュレータ</title>
+    <!-- OGP (Open Graph Protocol) メタタグ -->
+    <meta property="og:url" content="https://ogawa3427.github.io/shin-bus-system-simu/">
+    <meta property="og:title" content="新バスシステムシミュレータ">
+    <meta property="og:description" content="金沢近郊での新バスシステム表示装置のシミュレーターです。複数のタイプから選択して、停留所情報や路線情報を編集できます。">
+    <meta property="og:image" content="https://ogawa3427.github.io/shin-bus-system-simu/index_samune.jpg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@ogawa3427">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
-    <!-- https://icooon-mono.com/11936-%E3%83%90%E3%82%B9%E3%81%AE%E3%82%A2%E3%82%A4%E3%82%B3%E3%83%B3/ -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             margin: 0;
-            padding: 0;
-            background: #000;
+            padding: 40px 20px;
+            background: #f5f5f5;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 0 40px 0;
+            text-align: center;
+        }
+        .menu-grid {
             display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            min-height: 100vh;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
         }
-        canvas {
+        .menu-card {
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
             display: block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            width: 30%;
+            min-width: 350px;
+            max-width: 500px;
         }
-        #editor {
-            background: #fff;
-            color: #000;
+        .menu-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            border-color: #007bff;
+        }
+        .menu-card-header {
             padding: 20px;
-            width: 90%;
-            max-width: 1200px;
-            margin-top: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
         }
-        .route-editor {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-            color: #000;
+        .menu-card-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin: 0;
         }
-        .route-editor h3 {
-            color: #000;
-            margin-top: 0;
+        .menu-card-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin: 8px 0 0 0;
         }
-        .route-editor input[type="text"] {
-            color: #000;
-            background: #fff;
-            border: 1px solid #ccc;
-            padding: 4px;
+        .menu-card-preview {
+            width: 100%;
+            height: 0;
+            padding-bottom: 75%; /* 4:3 アスペクト比 */
+            position: relative;
+            background: #000;
+            overflow: hidden;
         }
-        .route-editor label {
-            display: inline-block;
-            margin-right: 10px;
-        }
-        .route-editor input[type="text"] {
-            width: 200px;
-            margin-right: 10px;
-        }
-        .route-editor input[type="checkbox"] {
-            margin-right: 5px;
+        .menu-card-preview iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 333.33%; /* 100% / 0.3 = 333.33% */
+            height: 333.33%;
+            border: none;
+            transform: scale(0.3);
+            transform-origin: top left;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
-    <canvas id="display"></canvas>
-    <div id="editor"></div>
-    <script src="render.js"></script>
-    <script src="main.js"></script>
-    <script>
-        (function() {
-            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                const ws = new WebSocket('ws://localhost:8001');
-                ws.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'reload') {
-                        location.reload();
-                    }
-                };
-                ws.onerror = function() {
-                    console.log('開発サーバーに接続できません（通常の動作には影響ありません）');
-                };
-            }
-        })();
-    </script>
+    <div class="container">
+        <h1>新バスシステムシミュレータ</h1>
+        <div class="menu-grid">
+            <a href="hirosaka1/index.html" class="menu-card">
+                <div class="menu-card-header">
+                    <h2 class="menu-card-title">大型 広坂①タイプ</h2>
+                    <p class="menu-card-subtitle">広坂①停留所の大型表示タイプ</p>
+                </div>
+                <div class="menu-card-preview">
+                    <iframe src="hirosaka1/preview.html"></iframe>
+                </div>
+            </a>
+        </div>
+    </div>
 </body>
 </html>
-
