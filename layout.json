@@ -2,13 +2,14 @@
   "canvas": {
     "width": 841,
     "height": 1600,
-    "backgroundColor": "#0b0b0b"
+    "backgroundColor": "#2c2c2c"
   },
   "header": {
     "height": 260,
+    "backgroundColor": null,
     "label": {
       "text": "新バスシステム",
-      "backgroundColor": "#000000",
+      "backgroundColor": "#2c2c2c",
       "textColor": "#e6c200",
       "borderColor": "#e6c200",
       "paddingX": 20,
@@ -18,10 +19,13 @@
     "description": {
       "fontSize": 20,
       "color": "#cfcfcf",
-      "marginTop": 48
+      "marginTop": 48,
+      "squareOnColor": "#4d984d",
+      "squareOnEdgeColor": "#FFFFFF",
+      "squareOnIconColor": "#FFFFFF"
     },
     "columnHeaders": {
-      "fontSize": 28,
+      "fontSize": 25,
       "smallFontSize": 14,
       "color": "#cfcfcf",
       "marginTop": 60,
@@ -29,22 +33,23 @@
       "topLine": {
         "y": 200,
         "width": 1082,
-        "color": "#ffffff",
+        "color": "#f1f1f1",
         "lineWidth": 6
       }
     }
   },
   "row": {
     "height": 100,
-    "gap": 0,
-    "backgroundColor": "#111111",
-    "activeBackgroundColor": "#2a2a2a",
+    "gap":20,
+    "horizontalGap": 0,
+    "backgroundColor": "#2c2c2c",
+    "gapBackgroundColor": "#030303",
     "borderColor": "#333333",
     "borderWidth": 1
   },
   "columns": {
     "widths": {
-      "approach": 200,
+      "approach": 220,
       "number": 100,
       "via": 240,
       "destination": 500,
@@ -57,42 +62,81 @@
       "afterDestination": 0
     },
     "greenSquares": {
-      "paddingLeft": 16,
+      "paddingLeft": 36,
       "squareSize": 20,
       "squareGap": 8,
-      "color": "#90ee90"
+      "color": "#90ee90",
+      "onFillColor": "#90ee90",
+      "onEdgeColor": "#888888",
+      "onIconColor": "#888888"
     },
     "number": {
       "paddingLeft": 8,
       "fontSize": 20,
-      "color": "#ffffff"
+      "color": "#f1f1f1"
     },
     "via": {
       "paddingLeft": 16,
       "fontSize": 14,
-      "color": "#ffffff"
+      "color": "#f1f1f1"
     },
     "destination": {
       "paddingLeft": 16,
       "fontSize": 20,
-      "color": "#ffffff"
+      "color": "#f1f1f1"
     },
     "led": {
       "ellipseWidth": 48,
       "ellipseHeight": 90,
-      "paddingRight": 0,
+      "paddingRight": 20,
       "color": "#552222",
       "borderColor": "#333333"
     }
   },
   "sidePanel": {
-    "width": 300,
+    "width": 700,
     "backgroundColor": "#0f0f0f",
-    "padding": 20,
+    "padding": 50,
     "stopNameFontSize": 24,
     "stopNumberFontSize": 18,
     "englishFontSize": 14,
-    "textColor": "#ffffff"
+    "textColor": "#f1f1f1",
+    "legend": {
+      "marginTop": 205,
+      "itemHeight": 60,
+      "itemGap": 15,
+      "gapBeforeObstacle": 80,
+      "squareSize": 75,
+      "squareGap": 3,
+      "textFontSize": 36,
+      "textMarginLeft": 10,
+      "textColor": "#f1f1f1",
+      "textKerning": -0.08,
+      "onFillColor": "#40Ae50",
+      "onEdgeColor": "#FBFFFF",
+      "onIconColor": "#FFFFFF",
+      "otherRoutesMessage": {
+        "marginTop": 40,
+        "fontSize": 38,
+        "color": "#cfcfcf"
+      },
+      "obstacleCapsule": {
+        "widthRatio": 0.4,
+        "heightRatio": 0.8
+      },
+      "stopInfo": {
+        "marginTop": 400,
+        "nameFontSize": 90,
+        "nameLineGap": 4,
+        "numberFontSize": 120,
+        "numberMarginLeft": 12,
+        "platformFontSize": 64,
+        "platformMarginTop": 8,
+        "englishFontSize": 46,
+        "englishMarginTop": 12,
+        "textColor": "#f1f1f1"
+      }
+    }
   }
 }
 
