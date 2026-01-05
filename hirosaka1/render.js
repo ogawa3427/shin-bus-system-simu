@@ -383,22 +383,25 @@ class Renderer {
     ctx.lineTo(stripX + stripWidth, y + rowCfg.height);
     ctx.stroke();
 
-    // 短冊内の要素を描画するために、短冊の範囲に制限
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(stripX, y, stripWidth, rowCfg.height);
-    ctx.clip();
-    
-    // 短冊内の要素を描画（短冊の左端 + horizontalGapを基準にする）
-    ctx.translate(stripX + horizontalGap, 0);
-    this.drawRowGreenSquares(y, approachState, ledState, obstacleState);
-    this.drawRowNumber(route, y);
-    this.drawRowVia(route, y);
-    this.drawRowDestination(route, y);
-    this.drawRowLED(y, obstacleState);
-    ctx.translate(-(stripX + horizontalGap), 0);
-    
-    ctx.restore();
+    // 空きコマの場合は内容を描画しない（背景と境界線のみ）
+    if (!route.empty) {
+      // 短冊内の要素を描画するために、短冊の範囲に制限
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(stripX, y, stripWidth, rowCfg.height);
+      ctx.clip();
+      
+      // 短冊内の要素を描画（短冊の左端 + horizontalGapを基準にする）
+      ctx.translate(stripX + horizontalGap, 0);
+      this.drawRowGreenSquares(y, approachState, ledState, obstacleState);
+      this.drawRowNumber(route, y);
+      this.drawRowVia(route, y);
+      this.drawRowDestination(route, y);
+      this.drawRowLED(y, obstacleState);
+      ctx.translate(-(stripX + horizontalGap), 0);
+      
+      ctx.restore();
+    }
 
     ctx.restore();
   }

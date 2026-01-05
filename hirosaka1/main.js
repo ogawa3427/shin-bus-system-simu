@@ -22,7 +22,7 @@
   
   // クエリパラメータのキー定義（短縮形）
   // stopInfo: snu=nameUpper, snl=nameLower, sn=number, spn=platformName, se=english
-  // routes[i]: r{i}nu, r{i}nl, r{i}du, r{i}dl, r{i}sd, r{i}af, r{i}an, r{i}ob
+  // routes[i]: r{i}nu, r{i}nl, r{i}du, r{i}dl, r{i}sd, r{i}af, r{i}an, r{i}ob, r{i}em(empty)
   
   // クエリパラメータから状態を読み取る
   function getStateFromQuery() {
@@ -47,7 +47,7 @@
     for (let i = 0; i < 20; i++) {
       const prefix = `r${i}`;
       // このインデックスのパラメータが一つでもあるか確認
-      const hasAny = ['nu', 'nl', 'du', 'dl', 'sd', 'af', 'an', 'ob'].some(k => params.has(prefix + k));
+      const hasAny = ['nu', 'nl', 'du', 'dl', 'sd', 'af', 'an', 'ob', 'em'].some(k => params.has(prefix + k));
       if (!hasAny) continue;
       
       const route = {};
@@ -60,6 +60,7 @@
       route.approachFarBlink = params.get(prefix + 'af') === '1';
       route.approachNearBlink = params.get(prefix + 'an') === '1';
       route.obstacle = params.get(prefix + 'ob') === '1';
+      route.empty = params.get(prefix + 'em') === '1';
       
       // インデックス位置に配置
       state.routes[i] = route;
@@ -100,6 +101,7 @@
         if (route.approachFarBlink) params.set(prefix + 'af', '1');
         if (route.approachNearBlink) params.set(prefix + 'an', '1');
         if (route.obstacle) params.set(prefix + 'ob', '1');
+        if (route.empty) params.set(prefix + 'em', '1');
       });
     }
     
@@ -144,6 +146,7 @@
           merged.routes[i].approachFarBlink = getValueOrDefault(qRoute.approachFarBlink, defaultRoute.approachFarBlink ?? true, `routes[${i}].approachFarBlink`);
           merged.routes[i].approachNearBlink = getValueOrDefault(qRoute.approachNearBlink, defaultRoute.approachNearBlink ?? false, `routes[${i}].approachNearBlink`);
           merged.routes[i].obstacle = getValueOrDefault(qRoute.obstacle, defaultRoute.obstacle ?? false, `routes[${i}].obstacle`);
+          merged.routes[i].empty = getValueOrDefault(qRoute.empty, defaultRoute.empty ?? false, `routes[${i}].empty`);
         }
       });
     }
@@ -380,29 +383,56 @@
     displayData.routes.forEach((route, index) => {
       const routeDiv = document.createElement('div');
       routeDiv.className = 'route-editor';
+      routeDiv.dataset.index = index;
+      const isEmpty = route.empty || false;
       routeDiv.innerHTML = `
-        <h3>路線 ${index + 1}</h3>
-        <div>
-          <label>接近(遠): <input type="checkbox" class="approach-blink" data-index="${index}" ${approachFarBlink[index] ? 'checked' : ''}></label>
-          <label>接近(近): <input type="checkbox" class="led-blink" data-index="${index}" ${approachNearBlink[index] ? 'checked' : ''}></label>
-          <label>障害: <input type="checkbox" class="obstacle" data-index="${index}" ${obstacleStates[index] ? 'checked' : ''}></label>
-        </div>
-        <div>
-          <label>路線番号(上): <input type="text" class="number-upper" data-index="${index}" value="${route.numberUpper || ''}"></label>
-          <label>路線番号(下): <input type="text" class="number-lower" data-index="${index}" value="${route.numberLower || ''}"></label>
-        </div>
-        <div>
-          <label>行き先(上): <input type="text" class="destination-upper" data-index="${index}" value="${route.destinationUpper || ''}"></label>
-          <label>行き先(下): <input type="text" class="destination-lower" data-index="${index}" value="${route.destinationLower || ''}"></label>
-        </div>
-        <div>
-          <label>経由: <input type="text" class="sub-destination" data-index="${index}" value="${route.subDestination || ''}"></label>
+        <h3>路線 ${index + 1} <label style="margin-left: 16px; font-weight: normal; font-size: 14px;">空きコマ: <input type="checkbox" class="empty-slot" data-index="${index}" ${isEmpty ? 'checked' : ''}></label></h3>
+        <div class="route-fields" ${isEmpty ? 'style="opacity: 0.5; pointer-events: none;"' : ''}>
+          <div>
+            <label>接近(遠): <input type="checkbox" class="approach-blink" data-index="${index}" ${approachFarBlink[index] ? 'checked' : ''} ${isEmpty ? 'disabled' : ''}></label>
+            <label>接近(近): <input type="checkbox" class="led-blink" data-index="${index}" ${approachNearBlink[index] ? 'checked' : ''} ${isEmpty ? 'disabled' : ''}></label>
+            <label>障害: <input type="checkbox" class="obstacle" data-index="${index}" ${obstacleStates[index] ? 'checked' : ''} ${isEmpty ? 'disabled' : ''}></label>
+          </div>
+          <div>
+            <label>路線番号(上): <input type="text" class="number-upper" data-index="${index}" value="${route.numberUpper || ''}" ${isEmpty ? 'disabled' : ''}></label>
+            <label>路線番号(下): <input type="text" class="number-lower" data-index="${index}" value="${route.numberLower || ''}" ${isEmpty ? 'disabled' : ''}></label>
+          </div>
+          <div>
+            <label>行き先(上): <input type="text" class="destination-upper" data-index="${index}" value="${route.destinationUpper || ''}" ${isEmpty ? 'disabled' : ''}></label>
+            <label>行き先(下): <input type="text" class="destination-lower" data-index="${index}" value="${route.destinationLower || ''}" ${isEmpty ? 'disabled' : ''}></label>
+          </div>
+          <div>
+            <label>経由: <input type="text" class="sub-destination" data-index="${index}" value="${route.subDestination || ''}" ${isEmpty ? 'disabled' : ''}></label>
+          </div>
         </div>
       `;
       editorDiv.appendChild(routeDiv);
     });
     
     // イベントリスナーを設定
+    
+    // 空きコマチェックボックス
+    document.querySelectorAll('.empty-slot').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const isEmpty = e.target.checked;
+        displayData.routes[index].empty = isEmpty;
+        
+        // 該当路線の入力欄をグレーアウト/有効化
+        const routeDiv = document.querySelector(`.route-editor[data-index="${index}"]`);
+        const fieldsDiv = routeDiv.querySelector('.route-fields');
+        if (fieldsDiv) {
+          fieldsDiv.style.opacity = isEmpty ? '0.5' : '1';
+          fieldsDiv.style.pointerEvents = isEmpty ? 'none' : 'auto';
+          fieldsDiv.querySelectorAll('input').forEach(input => {
+            input.disabled = isEmpty;
+          });
+        }
+        
+        render();
+      });
+    });
+    
     document.querySelectorAll('.approach-blink').forEach(checkbox => {
       checkbox.addEventListener('change', (e) => {
         const index = parseInt(e.target.dataset.index);
