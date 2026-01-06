@@ -12,6 +12,67 @@ class Renderer {
     this.loadBusIcons();
   }
 
+  // カスタムカラータグをパースする
+  // <color>#ABCDEF</color> - 以降の文字色を変更
+  // <basecolor>#ABCDEF</basecolor> - 項目全体の背景色
+  parseColorTags(text) {
+    if (!text) return { basecolor: null, segments: [] };
+    
+    // <basecolor>#ABCDEF</basecolor> を抽出
+    const basecolorMatch = text.match(/<basecolor>(#[0-9A-Fa-f]{6})<\/basecolor>/i);
+    const basecolor = basecolorMatch ? basecolorMatch[1] : null;
+    
+    // <basecolor>タグを除去
+    let cleanText = text.replace(/<basecolor>#[0-9A-Fa-f]{6}<\/basecolor>/gi, '');
+    
+    // <color>タグでセグメントに分割
+    const segments = [];
+    let currentColor = null;
+    let remaining = cleanText;
+    
+    while (remaining.length > 0) {
+      const colorMatch = remaining.match(/<color>(#[0-9A-Fa-f]{6})<\/color>/i);
+      if (colorMatch) {
+        const beforeColor = remaining.substring(0, colorMatch.index);
+        if (beforeColor) {
+          segments.push({ text: beforeColor, color: currentColor });
+        }
+        currentColor = colorMatch[1];
+        remaining = remaining.substring(colorMatch.index + colorMatch[0].length);
+      } else {
+        if (remaining) {
+          segments.push({ text: remaining, color: currentColor });
+        }
+        break;
+      }
+    }
+    
+    // セグメントがない場合は元のテキストをそのまま返す
+    if (segments.length === 0 && cleanText) {
+      segments.push({ text: cleanText, color: null });
+    }
+    
+    return { basecolor, segments };
+  }
+
+  // セグメントから純粋なテキストを取得
+  getPlainTextFromSegments(segments) {
+    return segments.map(s => s.text).join('');
+  }
+
+  // 文字インデックスから色を取得
+  getColorAtIndex(segments, charIndex, defaultColor) {
+    let currentIndex = 0;
+    for (const segment of segments) {
+      const segmentEnd = currentIndex + segment.text.length;
+      if (charIndex < segmentEnd) {
+        return segment.color || defaultColor;
+      }
+      currentIndex = segmentEnd;
+    }
+    return defaultColor;
+  }
+
   async loadBusIcons() {
     try {
       const response = await fetch('bus.svg');
@@ -549,17 +610,28 @@ class Renderer {
 
     ctx.save();
 
+    const text = route.number || '';
+    
+    // カラータグをパース
+    const parsed = this.parseColorTags(text);
+    
+    // 背景色が指定されている場合は描画
+    if (parsed.basecolor) {
+      ctx.fillStyle = parsed.basecolor;
+      ctx.fillRect(numberStartX, y, positions.number.width, rowHeight);
+    }
+
     ctx.fillStyle = cfg.color;
     ctx.font = `bold ${rowHeight * 0.9}px 'Noto Sans JP', sans-serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
     
-    const text = route.number || '';
-    const hasBr = text.includes('<br>');
+    const plainText = this.getPlainTextFromSegments(parsed.segments);
+    const hasBr = plainText.includes('<br>');
     
     if (hasBr) {
       // <br>で分割して2行に表示
-      const lines = text.split('<br>');
+      const lines = plainText.split('<br>');
       // 二段の時はフォントサイズを大きくして、縦方向だけ縮小
       const baseFontSize = rowHeight * 0.65; // フォントサイズを大きく
       const verticalScale = 0.75; // 縦方向のスケール
@@ -570,14 +642,18 @@ class Renderer {
       const topCenterY = startY + lineFontSize / 2;
       const bottomCenterY = startY + lineFontSize + gap + lineFontSize / 2;
       
+      // 上段と下段のセグメントを分割
+      const upperSegments = this.splitSegmentsAtBr(parsed.segments, 0);
+      const lowerSegments = this.splitSegmentsAtBr(parsed.segments, 1);
+      
       // 上段
       if (lines[0]) {
-        this.drawNumberLineScaled(ctx, lines[0], numberCenterX, topCenterY, baseFontSize, verticalScale, maxWidth);
+        this.drawNumberLineScaledWithColor(ctx, lines[0], numberCenterX, topCenterY, baseFontSize, verticalScale, maxWidth, upperSegments, cfg.color);
       }
       
       // 下段
       if (lines[1]) {
-        this.drawNumberLineScaled(ctx, lines[1], numberCenterX, bottomCenterY, baseFontSize, verticalScale, maxWidth);
+        this.drawNumberLineScaledWithColor(ctx, lines[1], numberCenterX, bottomCenterY, baseFontSize, verticalScale, maxWidth, lowerSegments, cfg.color);
       }
     } else {
       // 従来通り1行で表示（上下5%パディング）
@@ -585,10 +661,30 @@ class Renderer {
       const actualHeight = rowHeight - padding * 2;
       const actualFontSize = actualHeight * 0.9;
       const centerY = y + padding + actualHeight / 2;
-      this.drawNumberLine(ctx, text, numberCenterX, centerY, actualFontSize, maxWidth);
+      this.drawNumberLineWithColor(ctx, plainText, numberCenterX, centerY, actualFontSize, maxWidth, parsed.segments, cfg.color);
     }
 
     ctx.restore();
+  }
+
+  // <br>でセグメントを分割して指定行のセグメントを返す
+  splitSegmentsAtBr(segments, lineIndex) {
+    const result = [];
+    let currentLine = 0;
+    let currentColor = null;
+    
+    for (const segment of segments) {
+      const parts = segment.text.split('<br>');
+      for (let i = 0; i < parts.length; i++) {
+        if (i > 0) currentLine++;
+        if (currentLine === lineIndex && parts[i]) {
+          result.push({ text: parts[i], color: segment.color || currentColor });
+        }
+        if (segment.color) currentColor = segment.color;
+      }
+    }
+    
+    return result;
   }
 
   drawNumberLine(ctx, text, centerX, centerY, fontSize, maxWidth) {
@@ -629,6 +725,50 @@ class Renderer {
       // 文字を1文字ずつ描画（カーニング適用）
       let currentX = centerX - totalWidth / 2;
       chars.forEach((char, index) => {
+        ctx.fillText(char, currentX, centerY);
+        currentX += charWidths[index] + kerning;
+      });
+    }
+  }
+
+  drawNumberLineWithColor(ctx, text, centerX, centerY, fontSize, maxWidth, segments, defaultColor) {
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    
+    const chars = text.split('');
+    if (chars.length === 0) return;
+    
+    // 各文字の幅を測定
+    const charWidths = chars.map(char => {
+      const metrics = ctx.measureText(char);
+      return metrics.width;
+    });
+    const totalCharWidth = charWidths.reduce((sum, width) => sum + width, 0);
+    
+    // カーニングを狭くする（文字間隔を負の値にする）
+    const kerning = -fontSize * 0.08;
+    const totalWidth = totalCharWidth + kerning * (chars.length - 1);
+    
+    if (totalWidth > maxWidth) {
+      const scaleX = maxWidth / totalWidth;
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.scale(scaleX, 1);
+      ctx.translate(-centerX, -centerY);
+      
+      let currentX = centerX - totalWidth / 2;
+      chars.forEach((char, index) => {
+        ctx.fillStyle = this.getColorAtIndex(segments, index, defaultColor);
+        ctx.fillText(char, currentX, centerY);
+        currentX += charWidths[index] + kerning;
+      });
+      
+      ctx.restore();
+    } else {
+      let currentX = centerX - totalWidth / 2;
+      chars.forEach((char, index) => {
+        ctx.fillStyle = this.getColorAtIndex(segments, index, defaultColor);
         ctx.fillText(char, currentX, centerY);
         currentX += charWidths[index] + kerning;
       });
@@ -677,10 +817,50 @@ class Renderer {
     ctx.restore();
   }
 
+  drawNumberLineScaledWithColor(ctx, text, centerX, centerY, fontSize, verticalScale, maxWidth, segments, defaultColor) {
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    
+    const chars = text.split('');
+    if (chars.length === 0) return;
+    
+    // 各文字の幅を測定
+    const charWidths = chars.map(char => {
+      const metrics = ctx.measureText(char);
+      return metrics.width;
+    });
+    const totalCharWidth = charWidths.reduce((sum, width) => sum + width, 0);
+    
+    const kerning = -fontSize * 0.08;
+    const totalWidth = totalCharWidth + kerning * (chars.length - 1);
+    
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    
+    let scaleX = 1;
+    if (totalWidth > maxWidth) {
+      scaleX = maxWidth / totalWidth;
+    }
+    
+    ctx.scale(scaleX, verticalScale);
+    ctx.translate(-centerX, -centerY);
+    
+    let currentX = centerX - totalWidth / 2;
+    chars.forEach((char, index) => {
+      ctx.fillStyle = this.getColorAtIndex(segments, index, defaultColor);
+      ctx.fillText(char, currentX, centerY);
+      currentX += charWidths[index] + kerning;
+    });
+    
+    ctx.restore();
+  }
+
   drawRowVia(route, y) {
     const ctx = this.ctx;
     const cfg = this.layout.columns.via;
-    const centerY = y + this.layout.row.height / 2;
+    const rowHeight = this.layout.row.height;
+    const centerY = y + rowHeight / 2;
     
     const positions = this.getColumnPositions();
     const viaStartX = positions.via.start + cfg.paddingLeft;
@@ -690,15 +870,27 @@ class Renderer {
 
     ctx.save();
 
-    const fontSize = this.layout.row.height * 0.45;
-    ctx.fillStyle = cfg.color;
-    ctx.font = `bold ${fontSize}px 'M PLUS Rounded 1c', sans-serif`;
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
+    const fontSize = rowHeight * 0.45;
     
     if (route.subDestination) {
       const text = route.subDestination;
-      const chars = text.split('');
+      
+      // カラータグをパース
+      const parsed = this.parseColorTags(text);
+      
+      // 背景色が指定されている場合は描画
+      if (parsed.basecolor) {
+        ctx.fillStyle = parsed.basecolor;
+        ctx.fillRect(positions.via.start, y, positions.via.width, rowHeight);
+      }
+      
+      ctx.fillStyle = cfg.color;
+      ctx.font = `bold ${fontSize}px 'M PLUS Rounded 1c', sans-serif`;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      
+      const plainText = this.getPlainTextFromSegments(parsed.segments);
+      const chars = plainText.split('');
       if (chars.length > 0) {
         const charWidths = chars.map(char => {
           ctx.font = `bold ${fontSize}px 'M PLUS Rounded 1c', sans-serif`;
@@ -709,7 +901,6 @@ class Renderer {
         
         if (totalCharWidth > viaAreaWidth) {
           const scaleX = viaAreaWidth / totalCharWidth;
-          const scaledTotalWidth = totalCharWidth * scaleX;
           
           ctx.save();
           ctx.translate(viaCenterX, centerY);
@@ -718,6 +909,7 @@ class Renderer {
           
           let currentX = viaCenterX - totalCharWidth / 2;
           chars.forEach((char, index) => {
+            ctx.fillStyle = this.getColorAtIndex(parsed.segments, index, cfg.color);
             ctx.fillText(char, currentX, centerY);
             currentX += charWidths[index];
           });
@@ -728,6 +920,7 @@ class Renderer {
           const textStartX = viaCenterX - totalWidthWithSpacing / 2;
           let currentX = textStartX;
           chars.forEach((char, index) => {
+            ctx.fillStyle = this.getColorAtIndex(parsed.segments, index, cfg.color);
             ctx.fillText(char, currentX, centerY);
             currentX += charWidths[index] + spacing;
           });
@@ -751,18 +944,29 @@ class Renderer {
 
     ctx.save();
 
+    const text = route.destination || '';
+    
+    // カラータグをパース
+    const parsed = this.parseColorTags(text);
+    
+    // 背景色が指定されている場合は描画
+    if (parsed.basecolor) {
+      ctx.fillStyle = parsed.basecolor;
+      ctx.fillRect(positions.destination.start, y, positions.destination.width, rowHeight);
+    }
+
     const fontSize = rowHeight * 0.9;
     ctx.fillStyle = cfg.color;
     ctx.font = `900 ${fontSize}px 'Noto Sans JP', sans-serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     
-    const text = route.destination;
-    const hasBr = text.includes('<br>');
+    const plainText = this.getPlainTextFromSegments(parsed.segments);
+    const hasBr = plainText.includes('<br>');
     
     if (hasBr) {
       // <br>で分割して2行に表示
-      const lines = text.split('<br>');
+      const lines = plainText.split('<br>');
       const lineFontSize = rowHeight * 0.45;
       const gap = -rowHeight * 0.02; // 負の値で行を重ねて詰める
       const totalTextHeight = lineFontSize * 2 + gap;
@@ -770,14 +974,18 @@ class Renderer {
       const topCenterY = startY + lineFontSize / 2;
       const bottomCenterY = startY + lineFontSize + gap + lineFontSize / 2;
       
+      // 上段と下段のセグメントを分割
+      const upperSegments = this.splitSegmentsAtBr(parsed.segments, 0);
+      const lowerSegments = this.splitSegmentsAtBr(parsed.segments, 1);
+      
       // 上段
       if (lines[0]) {
-        this.drawDestinationLine(ctx, lines[0], destStartX, destEndX, destAreaWidth, destCenterX, topCenterY, lineFontSize);
+        this.drawDestinationLineWithColor(ctx, lines[0], destStartX, destEndX, destAreaWidth, destCenterX, topCenterY, lineFontSize, upperSegments, cfg.color);
       }
       
       // 下段
       if (lines[1]) {
-        this.drawDestinationLine(ctx, lines[1], destStartX, destEndX, destAreaWidth, destCenterX, bottomCenterY, lineFontSize);
+        this.drawDestinationLineWithColor(ctx, lines[1], destStartX, destEndX, destAreaWidth, destCenterX, bottomCenterY, lineFontSize, lowerSegments, cfg.color);
       }
     } else {
       // 従来通り1行で表示（上下5%パディング）
@@ -785,7 +993,7 @@ class Renderer {
       const actualHeight = rowHeight - padding * 2;
       const actualFontSize = actualHeight * 0.9;
       const centerY = y + padding + actualHeight / 2;
-      this.drawDestinationLine(ctx, text, destStartX, destEndX, destAreaWidth, destCenterX, centerY, actualFontSize);
+      this.drawDestinationLineWithColor(ctx, plainText, destStartX, destEndX, destAreaWidth, destCenterX, centerY, actualFontSize, parsed.segments, cfg.color);
     }
 
     ctx.restore();
@@ -821,6 +1029,45 @@ class Renderer {
         const textStartX = destCenterX - totalWidthWithSpacing / 2;
         let currentX = textStartX;
         chars.forEach((char, index) => {
+          ctx.fillText(char, currentX, centerY);
+          currentX += charWidths[index] + spacing;
+        });
+      }
+    }
+  }
+
+  drawDestinationLineWithColor(ctx, text, destStartX, destEndX, destAreaWidth, destCenterX, centerY, fontSize, segments, defaultColor) {
+    const chars = text.split('');
+    if (chars.length > 0) {
+      ctx.font = `900 ${fontSize}px 'Noto Sans JP', sans-serif`;
+      const charWidths = chars.map(char => {
+        const metrics = ctx.measureText(char);
+        return metrics.width;
+      });
+      const totalCharWidth = charWidths.reduce((sum, width) => sum + width, 0);
+      
+      if (totalCharWidth > destAreaWidth) {
+        const scaleX = destAreaWidth / totalCharWidth;
+        
+        ctx.save();
+        ctx.translate(destCenterX, centerY);
+        ctx.scale(scaleX, 1);
+        ctx.translate(-destCenterX, -centerY);
+        
+        let currentX = destCenterX - totalCharWidth / 2;
+        chars.forEach((char, index) => {
+          ctx.fillStyle = this.getColorAtIndex(segments, index, defaultColor);
+          ctx.fillText(char, currentX, centerY);
+          currentX += charWidths[index];
+        });
+        ctx.restore();
+      } else {
+        const spacing = chars.length > 1 ? (destAreaWidth - totalCharWidth) / (chars.length - 1) : 0;
+        const totalWidthWithSpacing = totalCharWidth + spacing * (chars.length - 1);
+        const textStartX = destCenterX - totalWidthWithSpacing / 2;
+        let currentX = textStartX;
+        chars.forEach((char, index) => {
+          ctx.fillStyle = this.getColorAtIndex(segments, index, defaultColor);
           ctx.fillText(char, currentX, centerY);
           currentX += charWidths[index] + spacing;
         });

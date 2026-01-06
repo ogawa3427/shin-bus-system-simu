@@ -39,6 +39,20 @@
             padding-bottom: 16px;
             border-bottom: 2px solid #ccc;
         }
+        @media (orientation: portrait) {
+            .header-row {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+            .header-left {
+                justify-content: center;
+            }
+            .zoom-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
         .header-left {
             display: flex;
             align-items: center;
