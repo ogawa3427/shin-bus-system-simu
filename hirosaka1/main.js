@@ -6,11 +6,13 @@
     return;
   }
   
-  function parseNumberText(upper, lower) {
-    if (!upper && !lower) return '';
-    if (!upper) return lower;
-    if (!lower) return upper;
-    return upper + '<br>' + lower;
+  function parseNumberText(upper, middle, lower) {
+    // 三段対応: upper, middle, lower
+    // 後方互換性のため、middleがない場合は二段表示
+    // 注: スペースは空行ではない。純粋な空文字列のみ空行とみなす
+    const parts = [upper, middle, lower].filter(p => p !== '' && p !== undefined && p !== null);
+    if (parts.length === 0) return '';
+    return parts.join('<br>');
   }
   
   function parseDestinationText(upper, lower) {
@@ -22,7 +24,8 @@
   
   // クエリパラメータのキー定義（短縮形）
   // stopInfo: snu=nameUpper, snl=nameLower, sn=number, spn=platformName, se=english
-  // routes[i]: r{i}nu, r{i}nl, r{i}du, r{i}dl, r{i}sd, r{i}af, r{i}an, r{i}ob, r{i}em(empty)
+  // routes[i]: r{i}nu, r{i}nm, r{i}nl, r{i}du, r{i}dl, r{i}sd, r{i}af, r{i}an, r{i}ob, r{i}em(empty)
+  // 注: nmはnumberMiddle（三段対応で追加）。後方互換性のため、nmがない場合は従来通り二段表示
   
   // クエリパラメータから状態を読み取る
   function getStateFromQuery() {
@@ -46,12 +49,13 @@
     // routes（最大20路線まで対応）
     for (let i = 0; i < 20; i++) {
       const prefix = `r${i}`;
-      // このインデックスのパラメータが一つでもあるか確認
-      const hasAny = ['nu', 'nl', 'du', 'dl', 'sd', 'af', 'an', 'ob', 'em'].some(k => params.has(prefix + k));
+      // このインデックスのパラメータが一つでもあるか確認（nmも追加）
+      const hasAny = ['nu', 'nm', 'nl', 'du', 'dl', 'sd', 'af', 'an', 'ob', 'em'].some(k => params.has(prefix + k));
       if (!hasAny) continue;
       
       const route = {};
       if (params.has(prefix + 'nu')) route.numberUpper = params.get(prefix + 'nu');
+      if (params.has(prefix + 'nm')) route.numberMiddle = params.get(prefix + 'nm');
       if (params.has(prefix + 'nl')) route.numberLower = params.get(prefix + 'nl');
       if (params.has(prefix + 'du')) route.destinationUpper = params.get(prefix + 'du');
       if (params.has(prefix + 'dl')) route.destinationLower = params.get(prefix + 'dl');
@@ -93,6 +97,7 @@
       data.routes.forEach((route, i) => {
         const prefix = `r${i}`;
         setIfDefined(prefix + 'nu', route.numberUpper);
+        setIfDefined(prefix + 'nm', route.numberMiddle);
         setIfDefined(prefix + 'nl', route.numberLower);
         setIfDefined(prefix + 'du', route.destinationUpper);
         setIfDefined(prefix + 'dl', route.destinationLower);
@@ -139,6 +144,7 @@
         if (i < merged.routes.length) {
           const defaultRoute = merged.routes[i];
           merged.routes[i].numberUpper = getValueOrDefault(qRoute.numberUpper, defaultRoute.numberUpper || '', `routes[${i}].numberUpper`);
+          merged.routes[i].numberMiddle = getValueOrDefault(qRoute.numberMiddle, defaultRoute.numberMiddle || '', `routes[${i}].numberMiddle`);
           merged.routes[i].numberLower = getValueOrDefault(qRoute.numberLower, defaultRoute.numberLower || '', `routes[${i}].numberLower`);
           merged.routes[i].destinationUpper = getValueOrDefault(qRoute.destinationUpper, defaultRoute.destinationUpper || '', `routes[${i}].destinationUpper`);
           merged.routes[i].destinationLower = getValueOrDefault(qRoute.destinationLower, defaultRoute.destinationLower || '', `routes[${i}].destinationLower`);
@@ -173,7 +179,7 @@
   
   // 新しいデータ構造から従来の構造に変換
   displayData.routes = displayData.routes.map(route => {
-    const number = parseNumberText(route.numberUpper || '', route.numberLower || '');
+    const number = parseNumberText(route.numberUpper || '', route.numberMiddle || '', route.numberLower || '');
     const destination = parseDestinationText(route.destinationUpper || '', route.destinationLower || '');
     return {
       ...route,
@@ -395,6 +401,7 @@
           </div>
           <div>
             <label>路線番号(上): <input type="text" class="number-upper" data-index="${index}" value="${route.numberUpper || ''}" ${isEmpty ? 'disabled' : ''}></label>
+            <label>路線番号(中): <input type="text" class="number-middle" data-index="${index}" value="${route.numberMiddle || ''}" ${isEmpty ? 'disabled' : ''}></label>
             <label>路線番号(下): <input type="text" class="number-lower" data-index="${index}" value="${route.numberLower || ''}" ${isEmpty ? 'disabled' : ''}></label>
           </div>
           <div>
@@ -472,14 +479,16 @@
       });
     });
     
-    document.querySelectorAll('.number-upper, .number-lower').forEach(input => {
+    document.querySelectorAll('.number-upper, .number-middle, .number-lower').forEach(input => {
       input.addEventListener('input', (e) => {
         const index = parseInt(e.target.dataset.index);
         const upper = document.querySelector(`.number-upper[data-index="${index}"]`).value;
+        const middle = document.querySelector(`.number-middle[data-index="${index}"]`).value;
         const lower = document.querySelector(`.number-lower[data-index="${index}"]`).value;
         displayData.routes[index].numberUpper = upper;
+        displayData.routes[index].numberMiddle = middle;
         displayData.routes[index].numberLower = lower;
-        displayData.routes[index].number = parseNumberText(upper, lower);
+        displayData.routes[index].number = parseNumberText(upper, middle, lower);
         render();
       });
     });

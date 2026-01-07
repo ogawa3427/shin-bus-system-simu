@@ -627,36 +627,57 @@ class Renderer {
     ctx.textAlign = 'center';
     
     const plainText = this.getPlainTextFromSegments(parsed.segments);
-    const hasBr = plainText.includes('<br>');
+    const lines = plainText.split('<br>').filter(l => l !== ''); // 純粋な空文字列のみ除去（スペースは残す）
+    const lineCount = lines.length;
     
-    if (hasBr) {
-      // <br>で分割して2行に表示
-      const lines = plainText.split('<br>');
-      // 二段の時はフォントサイズを大きくして、縦方向だけ縮小
-      const baseFontSize = rowHeight * 0.65; // フォントサイズを大きく
-      const verticalScale = 0.75; // 縦方向のスケール
-      const lineFontSize = baseFontSize * verticalScale; // 実際の高さ
-      const gap = -rowHeight * 0.075; // 負の値で行を重ねて詰める
+    if (lineCount === 3) {
+      // 三段表示: 大きめのフォントで描画→縦を大きく潰す→横も少し潰す
+      const baseFontSize = rowHeight * 0.55; // 大きめのフォント
+      const verticalScale = 0.55; // 縦を大きく潰す
+      const horizontalScale = 0.92; // 横も少し潰す
+      const lineFontSize = baseFontSize * verticalScale;
+      const gap = -rowHeight * 0.02; // 行間を詰める
+      const totalTextHeight = lineFontSize * 3 + gap * 2;
+      const startY = y + (rowHeight - totalTextHeight) / 2;
+      const topCenterY = startY + lineFontSize / 2;
+      const middleCenterY = startY + lineFontSize + gap + lineFontSize / 2;
+      const bottomCenterY = startY + lineFontSize * 2 + gap * 2 + lineFontSize / 2;
+      
+      const upperSegments = this.splitSegmentsAtBr(parsed.segments, 0);
+      const middleSegments = this.splitSegmentsAtBr(parsed.segments, 1);
+      const lowerSegments = this.splitSegmentsAtBr(parsed.segments, 2);
+      
+      if (lines[0]) {
+        this.drawNumberLineScaledWithColor(ctx, lines[0], numberCenterX, topCenterY, baseFontSize, verticalScale, maxWidth, upperSegments, cfg.color, horizontalScale);
+      }
+      if (lines[1]) {
+        this.drawNumberLineScaledWithColor(ctx, lines[1], numberCenterX, middleCenterY, baseFontSize, verticalScale, maxWidth, middleSegments, cfg.color, horizontalScale);
+      }
+      if (lines[2]) {
+        this.drawNumberLineScaledWithColor(ctx, lines[2], numberCenterX, bottomCenterY, baseFontSize, verticalScale, maxWidth, lowerSegments, cfg.color, horizontalScale);
+      }
+    } else if (lineCount === 2) {
+      // 二段表示
+      const baseFontSize = rowHeight * 0.65;
+      const verticalScale = 0.75;
+      const lineFontSize = baseFontSize * verticalScale;
+      const gap = -rowHeight * 0.075;
       const totalTextHeight = lineFontSize * 2 + gap;
       const startY = y + (rowHeight - totalTextHeight) / 2;
       const topCenterY = startY + lineFontSize / 2;
       const bottomCenterY = startY + lineFontSize + gap + lineFontSize / 2;
       
-      // 上段と下段のセグメントを分割
       const upperSegments = this.splitSegmentsAtBr(parsed.segments, 0);
       const lowerSegments = this.splitSegmentsAtBr(parsed.segments, 1);
       
-      // 上段
       if (lines[0]) {
         this.drawNumberLineScaledWithColor(ctx, lines[0], numberCenterX, topCenterY, baseFontSize, verticalScale, maxWidth, upperSegments, cfg.color);
       }
-      
-      // 下段
       if (lines[1]) {
         this.drawNumberLineScaledWithColor(ctx, lines[1], numberCenterX, bottomCenterY, baseFontSize, verticalScale, maxWidth, lowerSegments, cfg.color);
       }
     } else {
-      // 従来通り1行で表示（上下5%パディング）
+      // 一段表示（上下5%パディング）
       const padding = rowHeight * 0.05;
       const actualHeight = rowHeight - padding * 2;
       const actualFontSize = actualHeight * 0.9;
@@ -817,7 +838,7 @@ class Renderer {
     ctx.restore();
   }
 
-  drawNumberLineScaledWithColor(ctx, text, centerX, centerY, fontSize, verticalScale, maxWidth, segments, defaultColor) {
+  drawNumberLineScaledWithColor(ctx, text, centerX, centerY, fontSize, verticalScale, maxWidth, segments, defaultColor, horizontalScale = 1.0) {
     ctx.font = `bold ${fontSize}px 'Noto Sans JP', sans-serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
@@ -838,8 +859,10 @@ class Renderer {
     ctx.save();
     ctx.translate(centerX, centerY);
     
-    let scaleX = 1;
-    if (totalWidth > maxWidth) {
+    // 横スケール適用後の幅で収まるか判定
+    const scaledWidth = totalWidth * horizontalScale;
+    let scaleX = horizontalScale;
+    if (scaledWidth > maxWidth) {
       scaleX = maxWidth / totalWidth;
     }
     
